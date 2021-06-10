@@ -34,14 +34,14 @@ const serve = async () => {
                 ISO8601DateTime: () => new Date().toISOString(),
             },
             playground: {
-                endpoint: '/graphql',
+                endpoint: '/',
                 settings: {
                     "editor.theme": "dark"
                 }
             }
         });
         await server.start();
-        server.applyMiddleware({app});
+        server.applyMiddleware({app, path: '/'});
         app.listen(PORT, () => {
             log.info(`🚀 Server ready at :${PORT}${server.graphqlPath}`);
         });
