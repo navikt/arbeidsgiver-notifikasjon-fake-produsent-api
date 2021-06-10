@@ -9,3 +9,5 @@ spec:
   image: {{image}}
   prometheus:
     enabled: false
+  ingresses:
+  - https://notifikasjon-fake-produsent-api.arbeidsgiver.labs.nais.io/
