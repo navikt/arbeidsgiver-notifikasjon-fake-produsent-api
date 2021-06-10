@@ -1,0 +1,19 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "server/server.js",
+  "dependencies": {
+    "apollo-server-express": "^2.25.1",
+    "casual": "^1.6.2",
+    "express": "^4.17.1",
+    "graphql": "^15.5.0",
+    "nodemon": "^2.0.7",
+    "winston": "^3.3.3"
+  },
+  "scripts": {
+    "start": "nodemon --experimental-modules server/server.js",
+    "gql:cp_schema": "cp ../../arbeidsgiver-notifikasjon-produsent-api/app/src/main/resources/produsent.graphqls produsent.graphql"
+  }
+}

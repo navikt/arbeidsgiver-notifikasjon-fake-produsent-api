@@ -1,0 +1,157 @@
+directive @Validate on ARGUMENT_DEFINITION
+directive @MaxLength(max: Int) on INPUT_FIELD_DEFINITION
+directive @ExactlyOneFieldGiven on INPUT_OBJECT
+
+"""
+DateTime med offset etter ISO8601-standaren. F.eks. '2011-12-03T10:15:30+01:00'.
+"""
+scalar ISO8601DateTime
+
+"""
+Dette er roten som alle forespørsler starter fra.
+"""
+type Query {
+    """
+    Egnet for feilsøking. Forteller hvem du er autentisert som.
+    """
+    whoami: String
+}
+
+"""
+Dette er roten som alle endringer ("mutations") starter fra. Endringer inkluderer også
+å opprette nye ting.
+"""
+type Mutation {
+    """
+    Opprett en ny beskjed.
+    """
+    nyBeskjed(nyBeskjed: NyBeskjedInput! @Validate): NyBeskjedResultat!
+
+    """
+    Opprett en ny oppgave.
+    """
+    nyOppgave(nyOppgave: NyOppgaveInput! @Validate): NyOppgaveResultat!
+}
+
+input NyBeskjedInput {
+    mottaker: MottakerInput!
+    notifikasjon: NotifikasjonInput!
+    metadata: MetadataInput!
+}
+
+input NyOppgaveInput {
+    mottaker: MottakerInput!
+    notifikasjon: NotifikasjonInput!
+    metadata: MetadataInput!
+}
+
+"""
+Hvem som skal se notifikasjonen.
+
+Du kan spesifisere mottaker av notifikasjoner på forskjellige måter. Du skal bruke nøyaktig ett av feltene.
+
+Vi har implementert det på denne måten fordi GraphQL ikke støtter union-typer som input.
+"""
+input MottakerInput @ExactlyOneFieldGiven {
+    altinn: AltinnMottakerInput
+    naermesteLeder: NaermesteLederMottakerInput
+}
+
+"""
+Spesifiser mottaker ved hjelp av tilganger i Altinn. Enhver som har den gitte tilgangen vil
+kunne se notifikasjone.
+
+Tilgangssjekken utføres hver gang en bruker ser på notifikasjoner. Det betyr at hvis en
+bruker mister en Altinn-tilgang, så vil de hverken se historiske eller nye notifikasjone knyttet til den Altinn-tilgangen.
+Og motsatt, hvis en bruker får en Altinn-tilgang, vil de se tidligere notifikasjoner for den Altinn-tilgangen.
+"""
+input AltinnMottakerInput {
+    serviceCode: String!
+    serviceEdition: String!
+    virksomhetsnummer: String!
+}
+
+"""
+Spesifiser mottaker ved hjelp av fødselsnummer. Fødselsnummeret er det til nærmeste leder. Det er kun denne personen
+som potensielt kan se notifikasjonen. Det er videre en sjekk for å se om denne personen fortsatt er nærmeste leder
+for den ansatte notifikasjonen gjelder.
+
+Tilgangssjekken utføres hver gang en bruker ønsker se notifikasjonen.
+"""
+input NaermesteLederMottakerInput {
+    naermesteLederFnr: String!
+    ansattFnr: String!
+    virksomhetsnummer: String!
+}
+
+
+"""
+"""
+input NotifikasjonInput {
+    """
+    Merkelapp for beskjeden. Er typisk navnet på ytelse eller lignende. Den vises til brukeren.
+
+    Hva du kan oppgi som merkelapp er bestemt av produsent-registeret.
+    """
+    merkelapp: String!
+
+    """
+    Teksten som vises til brukeren.
+    """
+    tekst: String! @MaxLength(max: 300)
+
+    """
+    Lenken som brukeren føres til hvis de klikker på beskjeden.
+    """
+    lenke: String!
+}
+
+input MetadataInput {
+    """
+    """
+    eksternId: String!
+
+    """
+    """
+    opprettetTidspunkt: ISO8601DateTime
+
+    """
+    """
+    grupperingsid: String
+}
+
+union NyOppgaveResultat =
+    | NyOppgaveVellykket
+    | UgyldigMerkelapp
+    | UgyldigMottaker
+
+union NyBeskjedResultat =
+    | NyBeskjedVellykket
+    | UgyldigMerkelapp
+    | UgyldigMottaker
+
+type NyBeskjedVellykket {
+    id: ID!
+}
+
+type NyOppgaveVellykket {
+    id: ID!
+}
+
+"""
+Denne feilen returneres dersom en produsent forsøker å benytte en merkelapp som den ikke har tilgang til.
+"""
+type UgyldigMerkelapp implements Error {
+    feilmelding: String!
+}
+
+"""
+Denne feilen returneres dersom en produsent forsøker å benytte en mottaker som den ikke har tilgang til.
+"""
+type UgyldigMottaker implements Error {
+    feilmelding: String!
+}
+
+interface Error {
+    feilmelding: String!
+}
