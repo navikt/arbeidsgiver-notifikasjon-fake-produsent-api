@@ -10,4 +10,4 @@ spec:
   prometheus:
     enabled: false
   ingresses:
-  - https://notifikasjon-fake-produsent-api.arbeidsgiver.labs.nais.io/
+  - https://notifikasjon-fake-produsent-api.labs.nais.io/

@@ -1,4 +1,4 @@
-name: deploy dev manual
+name: deploy labs manual
 on:
   workflow_dispatch:
     inputs:

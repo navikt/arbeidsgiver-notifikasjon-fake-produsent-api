@@ -1,4 +1,4 @@
-name: deploy dev auto
+name: deploy labs auto
 on:
   workflow_run:
     workflows: [build]
