@@ -13,7 +13,7 @@
     "winston": "^3.3.3"
   },
   "scripts": {
-    "start": "nodemon --experimental-modules server/server.js",
+    "start": "nodemon --experimental-modules server.js",
     "gql:cp_schema": "cp ../../arbeidsgiver-notifikasjon-produsent-api/app/src/main/resources/produsent.graphqls produsent.graphql"
   }
 }
