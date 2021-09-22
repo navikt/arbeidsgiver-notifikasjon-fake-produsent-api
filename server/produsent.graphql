@@ -17,8 +17,18 @@ scalar ISO8601DateTime
 
 # scalar NotifikasjonCursor
 
+"""
+Tilstanden til en oppgave.
+"""
 enum OppgaveTilstand {
+    """
+    En oppgave som kan utføres.
+    """
     NY
+
+    """
+    En oppgave som allerede er utført.
+    """
     UTFOERT
 }
 
@@ -33,14 +43,15 @@ type Query {
 
     """
     Vi bruker det Connections-patternet for paginering. Se
-    (Connection-standaren)[https://relay.dev/graphql/connections.htm] for mer
+    [Connection-standaren](https://relay.dev/graphql/connections.htm) for mer
     informasjon.
 
-    Hvis man bruker filters, må de gjentas når man bruker cursor eller ikke?
-    Eller hvis filter på opprinnelig og cursor-kall er forskjellig.
+    Dere må gjenta paremetere når dere blar gjennom alle notifikasjonen.
     """
     mineNotifikasjoner(
+        "antall notifikasjoner du ønsker å hente"
         first: Int @Validate @MaxValue(upToIncluding: 10000)
+        """Cursor til notifikasjonen du henter fra. Cursor får du fra [NotifikasjonEdge](#notifikasjonedge)."""
         after: String
         merkelapp: String
     ): MineNotifikasjonerResultat!
@@ -49,6 +60,7 @@ type Query {
 union MineNotifikasjonerResultat =
     | NotifikasjonConnection
     | UgyldigMerkelapp
+    | UkjentProdusent
 
 type NotifikasjonConnection {
     edges: [NotifikasjonEdge!]!
@@ -247,6 +259,7 @@ union SoftDeleteNotifikasjonResultat =
     | SoftDeleteNotifikasjonVellykket
     | UgyldigMerkelapp
     | NotifikasjonFinnesIkke
+    | UkjentProdusent
 
 type SoftDeleteNotifikasjonVellykket {
     """
@@ -259,6 +272,7 @@ union HardDeleteNotifikasjonResultat =
     | HardDeleteNotifikasjonVellykket
     | UgyldigMerkelapp
     | NotifikasjonFinnesIkke
+    | UkjentProdusent
 
 type HardDeleteNotifikasjonVellykket {
     """
@@ -267,11 +281,11 @@ type HardDeleteNotifikasjonVellykket {
     id: ID!
 }
 
-
 union OppgaveUtfoertResultat =
     | OppgaveUtfoertVellykket
     | UgyldigMerkelapp
     | NotifikasjonFinnesIkke
+    | UkjentProdusent
 
 type OppgaveUtfoertVellykket {
     """
@@ -370,11 +384,15 @@ union NyOppgaveResultat =
     | NyOppgaveVellykket
     | UgyldigMerkelapp
     | UgyldigMottaker
+    | DuplikatEksternIdOgMerkelapp
+    | UkjentProdusent
 
 union NyBeskjedResultat =
     | NyBeskjedVellykket
     | UgyldigMerkelapp
     | UgyldigMottaker
+    | DuplikatEksternIdOgMerkelapp
+    | UkjentProdusent
 
 type NyBeskjedVellykket {
     id: ID!
@@ -399,6 +417,13 @@ type UgyldigMottaker implements Error {
 }
 
 """
+Denne feilen returneres dersom vi ikke greier å finne dere i produsent-registeret vårt.
+"""
+type UkjentProdusent implements Error {
+    feilmelding: String!
+}
+
+"""
 Denne feilen returneres dersom du prøver å referere til en notifikasjon
 som ikke eksisterer.
 
@@ -406,6 +431,13 @@ Utover at dere kan ha oppgitt feil informasjon, så kan det potensielt være på
 av "eventual consistency" i systemet vårt.
 """
 type NotifikasjonFinnesIkke implements Error {
+    feilmelding: String!
+}
+
+"""
+Denne feilen returneres dersom du prøver å opprette en notifikasjon med en eksternId og merkelapp som allerede finnes
+"""
+type DuplikatEksternIdOgMerkelapp implements Error {
     feilmelding: String!
 }
 
