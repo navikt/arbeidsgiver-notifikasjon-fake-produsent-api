@@ -5,7 +5,7 @@ on:
     types: [completed]
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.run_number }}
+  IMAGE: ghcr.io/${{ github.repository }}/fake-produsent-api:${{ github.event.workflow_run.run_number }}
 
 jobs:
   deploy:
