@@ -15,6 +15,12 @@ Er representert som String.
 """
 scalar ISO8601DateTime
 
+"""
+Dato og lokaltid etter ISO8601-standaren. F.eks. '2001-12-24T10:44:01'.
+Vi tolker tidspunktet som Oslo-tid ('Europe/Oslo').
+"""
+scalar ISO8601LocalDateTime
+
 # scalar NotifikasjonCursor
 
 """
@@ -47,14 +53,24 @@ type Query {
     informasjon.
 
     Dere må gjenta paremetere når dere blar gjennom alle notifikasjonen.
+
+    Hvis verken `merkelapp` eller `merkelapper` er gitt, vil notifikasjoner
+    med alle dine merkelapper være med.
     """
     mineNotifikasjoner(
         "antall notifikasjoner du ønsker å hente"
         first: Int @Validate @MaxValue(upToIncluding: 10000)
+
         """Cursor til notifikasjonen du henter fra. Cursor får du fra [NotifikasjonEdge](#notifikasjonedge)."""
         after: String
-        merkelapp: String,
-        grupperingsid: String,
+
+        """Filtrer på merkelapp. Kan ikke brukes sammen med `merkelapper`."""
+        merkelapp: String
+
+        """Filtrer på merkelapper. Kan ikke brukes sammen med `merkelapp`."""
+        merkelapper: [String!]
+
+        grupperingsid: String
     ): MineNotifikasjonerResultat!
 }
 
@@ -84,12 +100,14 @@ type Oppgave {
     mottaker: Mottaker!
     metadata: Metadata!
     oppgave: OppgaveData!
+    eksterneVarsler: [EksterntVarsel!]!
 }
 
 type Beskjed {
     mottaker: Mottaker!
     metadata: Metadata!
     beskjed: BeskjedData!
+    eksterneVarsler: [EksterntVarsel!]!
 }
 
 union Mottaker =
@@ -164,6 +182,18 @@ type Metadata {
     softDeletedAt: ISO8601DateTime
 }
 
+type EksterntVarsel {
+    id: ID!
+    status: EksterntVarselStatus!
+}
+
+enum EksterntVarselStatus {
+    NY
+    SENDT
+    FEILET
+}
+
+
 """
 Dette er roten som alle endringer ("mutations") starter fra. Endringer inkluderer også
 å opprette nye ting.
@@ -213,6 +243,8 @@ type Mutation {
 
     For dere (produsenter), så kan dere fortsatt se notifikasjonen i listen over deres notifikasjoner.
 
+    Eventuelle eksterne varsler (SMS, e-post) knyttet til notifikasjonen vil bli fortsatt bli sendt.
+
     Advarsel: det er ikke mulig å angre på denne operasjonen.
     """
     softDeleteNotifikasjon(id: ID!): SoftDeleteNotifikasjonResultat!
@@ -235,6 +267,8 @@ type Mutation {
     """
     Sletter en notifikasjon og tilhørende data helt fra databasen og kafka.
     Formålet er å støtte juridiske krav om sletting i henhold til personvern.
+
+    Eventuelle eksterne varsler (SMS, e-post) knyttet til notifikasjonen vil bli fortsatt bli sendt.
 
     Advarsel: det er ikke mulig å angre på denne operasjonen. All data blir borte for godt.
     """
@@ -299,13 +333,104 @@ input NyBeskjedInput {
     mottaker: MottakerInput!
     notifikasjon: NotifikasjonInput!
     metadata: MetadataInput!
+    eksterneVarsler: [EksterntVarselInput!]! = []
 }
 
 input NyOppgaveInput {
     mottaker: MottakerInput!
     notifikasjon: NotifikasjonInput!
     metadata: MetadataInput!
+    eksterneVarsler: [EksterntVarselInput!]! = []
 }
+
+input EksterntVarselInput @ExactlyOneFieldGiven {
+    sms: EksterntVarselSmsInput
+    epost: EksterntVarselEpostInput
+}
+
+enum Sendevindu {
+    """
+    Vi sender varselet slik at mottaker skal ha mulighet for å kontakte NAVs
+    kontaktsenter (NKS). Varsler blir sendt litt før NKS åpner, og vi slutter å
+    sende litt før NKS stenger.
+
+    Vi tar foreløpig ikke hensyn til røde dager eller produksjonshendelser som fører til
+    at NKS er utilgjengelig.
+    """
+    NKS_AAPNINGSTID
+
+
+    """
+    Vi sender varselet på dagtid, mandag til lørdag.
+    Altså sender vi ikke om kvelden og om natten, og ikke i det hele tatt på søndager.
+
+    Vi tar ikke hensyn til røde dager.
+    """
+    DAGTID_IKKE_SOENDAG
+
+    """
+    Vi sender varslet så fort vi kan.
+    """
+    LOEPENDE
+}
+
+"""
+Med denne typen velger du når du ønsker at det eksterne varselet blir sendt.
+Du skal velge en (og kun en) av feltene, ellers blir forespørselen din avvist
+med en feil.
+"""
+input SendetidspunktInput @ExactlyOneFieldGiven {
+    """
+    Hvis du spesifiserer et tidspunkt på formen "YYYY-MM-DDThh:mm", så sender
+    vi notifikasjonen på det tidspunktet. Oppgir du et tidspunkt i fortiden,
+    så sender vi varselet øyeblikkelig.
+
+    Tidspunktet tolker vi som lokal, norsk tid (veggklokke-tid).
+    """
+    tidspunkt: ISO8601LocalDateTime
+
+    sendevindu: Sendevindu
+}
+
+
+input EksterntVarselSmsInput {
+    mottaker: SmsMottakerInput!
+    smsTekst: String!
+    sendetidspunkt: SendetidspunktInput!
+}
+
+input EksterntVarselEpostInput {
+    mottaker: EpostMottakerInput!
+    epostTittel: String!
+    epostHtmlBody: String!
+    sendetidspunkt: SendetidspunktInput!
+}
+
+input SmsMottakerInput @ExactlyOneFieldGiven {
+    kontaktinfo: SmsKontaktInfoInput
+    # altinntjeneste: Altinntjeneste
+}
+
+input SmsKontaktInfoInput {
+    fnr: String!
+    tlf: String! # Validate regex ?
+}
+
+input EpostMottakerInput @ExactlyOneFieldGiven {
+    kontaktinfo: EpostKontaktInfoInput
+    # altinntjeneste: Altinntjeneste
+}
+
+input EpostKontaktInfoInput {
+    fnr: String!
+    epostadresse: String!
+}
+
+# input Altinntjeneste {
+#     virksomhetsnummer: String!
+#     serviceCode: String!
+#     serviceCodeEdition: String!
+# }
 
 """
 Hvem som skal se notifikasjonen.
@@ -397,10 +522,16 @@ union NyBeskjedResultat =
 
 type NyBeskjedVellykket {
     id: ID!
+    eksterneVarsler: [NyEksterntVarselResultat!]!
+}
+
+type NyEksterntVarselResultat {
+    id: ID!
 }
 
 type NyOppgaveVellykket {
     id: ID!
+    eksterneVarsler: [NyEksterntVarselResultat!]!
 }
 
 """
