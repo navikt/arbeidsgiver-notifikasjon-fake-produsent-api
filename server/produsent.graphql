@@ -98,6 +98,7 @@ union Notifikasjon = Beskjed | Oppgave
 
 type Oppgave {
     mottaker: Mottaker!
+    mottakere: [Mottaker!]!
     metadata: Metadata!
     oppgave: OppgaveData!
     eksterneVarsler: [EksterntVarsel!]!
@@ -105,6 +106,7 @@ type Oppgave {
 
 type Beskjed {
     mottaker: Mottaker!
+    mottakere: [Mottaker!]!
     metadata: Metadata!
     beskjed: BeskjedData!
     eksterneVarsler: [EksterntVarsel!]!
@@ -330,14 +332,41 @@ type OppgaveUtfoertVellykket {
 }
 
 input NyBeskjedInput {
-    mottaker: MottakerInput!
+    """
+    Se dokumentasjonen til `mottakere`-feltet.
+    """
+    mottaker: MottakerInput
+
+    """
+    Her bestemmer dere hvem som skal få se notifikasjonen.
+
+    Hvis dere oppgir en mottaker i `mottaker`-feltet, så tolker vi det som om det var et element
+    i denne listen over mottakere.
+
+    Dere må gi oss minst 1 mottaker.
+    """
+    mottakere: [MottakerInput!]! = []
+
     notifikasjon: NotifikasjonInput!
     metadata: MetadataInput!
     eksterneVarsler: [EksterntVarselInput!]! = []
 }
 
 input NyOppgaveInput {
+    """
+    Se dokumentasjonen til `mottakere`-feltet.
+    """
     mottaker: MottakerInput!
+
+    """
+    Her bestemmer dere hvem som skal få se notifikasjonen.
+
+    Hvis dere oppgir en mottaker i `mottaker`-feltet, så tolker vi det som om det var et element
+    i denne listen over mottakere.
+
+    Dere må gi oss minst 1 mottaker.
+    """
+    mottakere: [MottakerInput!]! = []
     notifikasjon: NotifikasjonInput!
     metadata: MetadataInput!
     eksterneVarsler: [EksterntVarselInput!]! = []
@@ -467,7 +496,11 @@ Og motsatt, hvis en bruker får en Altinn-tilgang, vil de se tidligere notifikas
 input AltinnMottakerInput {
     serviceCode: String!
     serviceEdition: String!
-    virksomhetsnummer: String!
+
+    """
+    Å oppgi virksomhetsnummer her er deprecated. Spesifiser det i metadata-feltet.
+    """
+    virksomhetsnummer: String
 }
 
 """
@@ -480,7 +513,11 @@ Tilgangssjekken utføres hver gang en bruker ønsker se notifikasjonen.
 input NaermesteLederMottakerInput {
     naermesteLederFnr: String!
     ansattFnr: String!
-    virksomhetsnummer: String!
+
+    """
+    Å oppgi virksomhetsnummer her er deprecated. Spesifiser det i metadata-feltet.
+    """
+    virksomhetsnummer: String
 }
 
 """
@@ -505,6 +542,11 @@ input NotifikasjonInput {
 }
 
 input MetadataInput {
+    """
+    Hvilken virksomhet som skal motta notifikasjonen.
+    """
+    virksomhetsnummer: String
+
     """
     """
     eksternId: String!
