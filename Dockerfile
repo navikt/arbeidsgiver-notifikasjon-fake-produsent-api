@@ -8,4 +8,4 @@ RUN npm ci
 USER apprunner
 
 EXPOSE 8080
-ENTRYPOINT ["/bin/sh", "start.sh"]
+ENTRYPOINT ["node", "server.js"]
