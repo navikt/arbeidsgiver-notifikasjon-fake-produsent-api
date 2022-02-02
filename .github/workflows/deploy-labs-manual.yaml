@@ -1,13 +1,6 @@
 name: deploy labs manual
 on:
   workflow_dispatch:
-    inputs:
-      image-tag:
-        description: 'Build run nummer to deploy (or image tag name)'
-        required: true
-
-env:
-  IMAGE: ghcr.io/${{ github.repository }}/fake-produsent-api:${{ github.event.inputs.image-tag }}
 
 jobs:
   deploy:
@@ -15,7 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: nais/deploy/actions/deploy@v1
+        name: "deploy labs ${{ github.ref }}"
         env:
+          IMAGE: ghcr.io/${{ github.repository }}/fake-produsent-api:${{ github.sha }}
+          REF: ${{ github.sha }}
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
-          CLUSTER: dev-gcp
+          CLUSTER: labs-gcp
           RESOURCE: nais-application.yaml
+
