@@ -1,12 +1,12 @@
 import fs from 'fs'
 import express from 'express';
 import casual from 'casual';
+import {createLogger, transports, format} from 'winston';
 import require from "./esm-require.js";
 
 const {PORT = 8080} = process.env;
 
 const {ApolloServer, gql} = require('apollo-server-express');
-const {createLogger, transports, format} = require('winston');
 const log = createLogger({
     transports: [
         new transports.Console({
