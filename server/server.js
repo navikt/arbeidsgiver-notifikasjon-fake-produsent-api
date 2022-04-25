@@ -6,7 +6,9 @@ import require from "./esm-require.js";
 
 const {PORT = 8080} = process.env;
 
+const { ApolloServerPluginLandingPageGraphQLPlayground } = require("apollo-server-core");
 const {ApolloServer, gql} = require('apollo-server-express');
+
 const log = createLogger({
     transports: [
         new transports.Console({
@@ -33,6 +35,9 @@ const serve = async () => {
                 String: () => casual.string,
                 ISO8601DateTime: () => new Date().toISOString(),
             },
+            plugins: [
+                ApolloServerPluginLandingPageGraphQLPlayground(),
+            ],
             playground: {
                 endpoint: '/',
                 settings: {
