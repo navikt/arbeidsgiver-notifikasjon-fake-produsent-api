@@ -41,6 +41,11 @@ enum OppgaveTilstand {
     En oppgave som allerede er utført.
     """
     UTFOERT
+
+    """
+    En oppgave hvor frist har utgått.
+    """
+    UTGAATT
 }
 
 """
@@ -319,7 +324,9 @@ type Mutation {
         overstyrStatustekstMed: String
 
         """
-        Oppgi dersom dere ønsker at hard delete skal skeduleres
+        Oppgi dersom dere ønsker at hard delete skal skeduleres. Vi
+        tolker relative datoer basert på `opprettetTidspunkt` (eller
+        når vi mottok kallet hvis dere ikke har oppgitt `opprettetTidspunkt`).
         """
         hardDelete: FutureTemporalInput @Validate
     ): NySakResultat!
@@ -456,6 +463,42 @@ type Mutation {
         """
         hardDelete: HardDeleteUpdateInput
     ): OppgaveUtfoertResultat!
+
+    """
+    Marker en oppgave (identifisert ved id) som utgått.
+    """
+    oppgaveUtgaatt(
+        """
+        ID-en som oppgaven har. Den du fikk da du opprettet oppgaven med `nyOppgave`.
+        """
+        id: ID!
+
+        """
+        Se: [HardDeleteUpdateInput typen](#harddeleteupdateinput)
+        """
+        hardDelete: HardDeleteUpdateInput
+    ): OppgaveUtgaattResultat!
+
+
+    """
+    Marker en oppgave (identifisert ved ekstern id) som utgått.
+    """
+    oppgaveUtgaattByEksternId(
+        """
+        Merkelapp som oppgaven er registrert med.
+        """
+        merkelapp: String!,
+
+        """
+        ID-en som *dere ga oss* da dere opprettet oppgaven med `nyOppgave`.
+        """
+        eksternId: String!
+
+        """
+        Se: [HardDeleteUpdateInput typen](#harddeleteupdateinput)
+        """
+        hardDelete: HardDeleteUpdateInput
+    ): OppgaveUtgaattResultat!
 
 
     """
@@ -597,6 +640,8 @@ type Mutation {
         """
         grupperingsid: String!
     ): HardDeleteSakResultat!
+
+
 }
 
 union SoftDeleteNotifikasjonResultat =
@@ -647,6 +692,19 @@ union HardDeleteSakResultat =
 type HardDeleteSakVellykket {
     """
     ID-en til saken du "hard-delete"-et.
+    """
+    id: ID!
+}
+union OppgaveUtgaattResultat =
+    | OppgaveUtgaattVellykket
+    | UgyldigMerkelapp
+    | OppgavenErAlleredeUtfoert
+    | NotifikasjonFinnesIkke
+    | UkjentProdusent
+
+type OppgaveUtgaattVellykket {
+    """
+    ID-en til oppgaven du oppdaterte.
     """
     id: ID!
 }
@@ -930,13 +988,27 @@ input MetadataInput {
     grupperingsid: String
 
     """
-    Oppgi dersom dere ønsker at hard delete skal skeduleres
+    Oppgi dersom dere ønsker at hard delete skal skeduleres. Vi
+    tolker relative datoer basert på `opprettetTidspunkt` (eller
+    når vi mottok kallet hvis dere ikke har oppgitt `opprettetTidspunkt`).
     """
     hardDelete: FutureTemporalInput
 }
 
+"""
+Med denne kan dere spesifiserer et konkret tidspunkt.
+"""
 input FutureTemporalInput @ExactlyOneFieldGiven {
+    """
+    En konkret dato. I Europe/Oslo-tidssone.
+    """
     den: ISO8601LocalDateTime
+
+    """
+    Som duration-offset relativt til implisitt dato.  Dere må se
+    på dokumentasjonen til feltet hvor denne datatypen er brukt for
+    å vite hva vi bruker som implisitt dato.
+    """
     om: ISO8601Duration
 }
 
@@ -945,7 +1017,10 @@ Dersom dere vet at saken/notifikasjonen senere skal slettes helt kan det angis h
 """
 input HardDeleteUpdateInput {
     """
-    Det vil bli utført en hardDelete når det angitte tidspunktet har passert.
+    Oppgi dersom dere ønsker at hard delete skal skeduleres. Vi
+    tolker relative datoer basert på tidspunkt angitt i kallet eller
+    når vi mottok kallet, hvis dere ikke har oppgitt det eller det
+    ikke er mulig å oppgi.
     """
     nyTid: FutureTemporalInput!
 
@@ -960,6 +1035,7 @@ enum NyTidStrategi {
     Vi bruker den tiden som er lengst i fremtiden.
     """
     FORLENG
+
     """
     Vi bruker den nye tiden uansett.
     """
@@ -1014,6 +1090,13 @@ type UgyldigMottaker implements Error {
 Denne feilen returneres dersom vi ikke greier å finne dere i produsent-registeret vårt.
 """
 type UkjentProdusent implements Error {
+    feilmelding: String!
+}
+
+"""
+Denne feilen returneres dersom du forsøker å gå fra utført til utgått.
+"""
+type OppgavenErAlleredeUtfoert implements Error {
     feilmelding: String!
 }
 
