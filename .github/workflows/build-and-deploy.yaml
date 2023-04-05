@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-        working-directory: ./server
+        working-directory: server
 
       - uses: nais/docker-build-push@v0
         id: docker-push
