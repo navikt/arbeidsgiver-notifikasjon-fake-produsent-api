@@ -1,0 +1,37 @@
+name: build and deploy
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build_and_push:
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.14.2'
+          registry-url: https://npm.pkg.github.com/
+          cache: 'npm'
+
+      - run: npm ci
+        working-directory: ./server
+
+      - uses: nais/docker-build-push@v0
+        id: docker-push
+        with:
+          team: fager
+          tag: ${{ github.sha }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+
+      - uses: nais/deploy/actions/deploy@v1
+        env:
+          IMAGE: ${{ steps.docker-push.outputs.image }}
+          CLUSTER: dev-gcp
+          RESOURCE: nais-application.yaml
+          PRINT_PAYLOAD: true
