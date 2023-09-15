@@ -1,11 +1,7 @@
-FROM navikt/node-express:16
+FROM gcr.io/distroless/nodejs20-debian11
 
 WORKDIR /usr/src/app/server
 COPY server/ .
 
-USER root
-RUN npm ci
-USER apprunner
-
 EXPOSE 8080
-ENTRYPOINT ["node", "server.js"]
+CMD ["server.js"]
